@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState, useRef, useCallback } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import AgoraRTM from "agora-rtm-sdk"; // Version 1.5.1
@@ -19,8 +20,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const rtcClient: any = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
-
 interface RemoteUser {
   uid: string;
   audioTrack?: any;
@@ -28,6 +27,7 @@ interface RemoteUser {
 }
 
 export default function VideoConference() {
+  const rtcClient: any = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
   const [appId, setAppId] = useState<string>("");
   const [channelName, setChannelName] = useState<string>("default-channel");
   const [uid, setUid] = useState<string>(
@@ -104,17 +104,19 @@ export default function VideoConference() {
   }, []);
 
   useEffect(() => {
-    rtcClient.on("user-published", handleUserPublished);
-    rtcClient.on("user-unpublished", handleUserUnpublished);
-    rtcClient.on("user-joined", handleUserJoined);
-    rtcClient.on("user-left", handleUserLeft);
+    if (typeof window !== undefined) {
+      rtcClient.on("user-published", handleUserPublished);
+      rtcClient.on("user-unpublished", handleUserUnpublished);
+      rtcClient.on("user-joined", handleUserJoined);
+      rtcClient.on("user-left", handleUserLeft);
 
-    return () => {
-      rtcClient.off("user-published", handleUserPublished);
-      rtcClient.off("user-unpublished", handleUserUnpublished);
-      rtcClient.off("user-joined", handleUserJoined);
-      rtcClient.off("user-left", handleUserLeft);
-    };
+      return () => {
+        rtcClient.off("user-published", handleUserPublished);
+        rtcClient.off("user-unpublished", handleUserUnpublished);
+        rtcClient.off("user-joined", handleUserJoined);
+        rtcClient.off("user-left", handleUserLeft);
+      };
+    }
   }, [
     handleUserPublished,
     handleUserUnpublished,
