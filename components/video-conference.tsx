@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState, useRef, useCallback } from "react";
 import AgoraRTC from "agora-rtc-sdk-ng";
 import AgoraRTM from "agora-rtm-sdk"; // Version 1.5.1
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const rtcClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+const rtcClient: any = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
 interface RemoteUser {
   uid: string;
@@ -252,7 +251,7 @@ export default function VideoConference() {
           channelName,
           uid: Number(uid),
           resourceId: acquireData.resourceId,
-          region: "ap-south-1",
+          region: "ap-southeast-1",
         }),
       });
       const startData = await startRes.json();
@@ -388,7 +387,7 @@ export default function VideoConference() {
                 className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video"
               >
                 <div
-                  ref={(el) => (remoteVideoRefs.current[user.uid] = el)}
+                  ref={(el: any) => (remoteVideoRefs.current[user.uid] = el)}
                   className="w-full h-full bg-black"
                 >
                   {!user.videoTrack && (

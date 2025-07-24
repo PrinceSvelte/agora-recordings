@@ -31,7 +31,7 @@ export async function POST(req: Request) {
   const authorization = `Basic ${Buffer.from(
     `${customerId}:${customerSecret}`
   ).toString("base64")}`;
-
+  console.log(authorization, "auth", stopUrl);
   try {
     // Retry query with delay to handle worker initialization
     let queryData: any = null;
@@ -39,39 +39,39 @@ export async function POST(req: Request) {
     const maxAttempts = 3;
     const retryDelay = 2000; // 2 seconds
 
-    while (queryAttempts < maxAttempts) {
-      const queryResponse = await fetch(queryUrl, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: authorization,
-        },
-      });
+    // while (queryAttempts < maxAttempts) {
+    //   const queryResponse = await fetch(queryUrl, {
+    //     method: "GET",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //       Authorization: authorization,
+    //     },
+    //   });
 
-      queryData = await queryResponse.json();
+    // queryData = await queryResponse.json();
 
-      if (queryResponse.ok) {
-        console.log("Recording status:", queryData);
-        break;
-      }
+    // if (queryResponse.ok) {
+    //   console.log("Recording status:", queryData);
+    //   break;
+    // }
 
-      console.warn(`Query attempt ${queryAttempts + 1} failed:`, queryData);
-      queryAttempts++;
-      if (queryAttempts < maxAttempts) {
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-      }
-    }
+    //   console.warn(`Query attempt ${queryAttempts + 1} failed:`, queryData);
+    //   queryAttempts++;
+    //   if (queryAttempts < maxAttempts) {
+    //     await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    //   }
+    // }
 
-    if (queryData.code !== 0 || !queryData.serverResponse) {
-      console.error("Agora Query Recording API Error:", queryData);
-      return NextResponse.json(
-        {
-          error: queryData?.reason || "Recording session not found",
-          details: queryData,
-        },
-        { status: 404 }
-      );
-    }
+    // if (queryData.code !== 0 || !queryData.serverResponse) {
+    //   console.error("Agora Query Recording API Error:", queryData);
+    //   return NextResponse.json(
+    //     {
+    //       error: queryData?.reason || "Recording session not found",
+    //       details: queryData,
+    //     },
+    //     { status: 404 }
+    //   );
+    // }
 
     // Stop recording
     const stopResponse = await fetch(stopUrl, {
@@ -104,7 +104,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       code: stopData.code,
-      fileList: queryData.fileList || [],
     });
   } catch (error) {
     console.error("Error in Agora recording stop process:", error);

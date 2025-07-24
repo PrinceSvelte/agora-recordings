@@ -43,14 +43,60 @@ export async function POST(req: Request) {
   const agoraRegionCode = getAgoraRegionCode(awsRegion);
   const agoraApiUrl = getAgoraCloudRecordingApiUrl(agoraRegionCode);
 
-  // ✅ MODE IS WEB NOW
-  const url = `${agoraApiUrl}/${appId}/cloud_recording/resourceid/${resourceId}/mode/web/start`;
+  const url = `${agoraApiUrl}/${appId}/cloud_recording/resourceid/${resourceId}/mode/mix/start`;
   const authorization = `Basic ${Buffer.from(
     `${customerId}:${customerSecret}`
   ).toString("base64")}`;
 
   try {
-    const fileNamePrefix = ["recordings", channelName, String(uid)];
+    // Generate unique filename prefix with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const fileNamePrefix = `recordings/${channelName}/${uid}/${timestamp}`;
+
+    const requestBody = {
+      cname: channelName,
+      uid: String(uid),
+      clientRequest: {
+        token:
+          "007eJxTYPglWi3mWxLsPcFU6PuT3jv5vk3fvyYzT17+LTBSa2qhaoQCQ5JBirFhSqqphYmxpYmhcVKiZUpqqmmyQZJlapKJhUXKpLqGjIZARoZWlauMjAwQCOLzM6SkpiWW5pToJmck5uWl5jAwAACz9yOv", // Use your actual token if channel is secured
+        recordingConfig: {
+          maxIdleTime: 120, // Stop recording after 2 minutes of inactivity
+          streamTypes: 2, // Audio and video
+          audioProfile: 1, // Music quality
+          channelType: 1, // Live broadcast
+          videoStreamType: 0, // High stream
+          transcodingConfig: {
+            width: 1280, // Better resolution for Singapore region
+            height: 720,
+            fps: 30,
+            bitrate: 2000, // Higher bitrate for better quality
+            mixedVideoLayout: 1, // Floating layout
+            backgroundColor: "#000000",
+            defaultUserBackground: "#808080",
+          },
+        },
+        recordingFileConfig: {
+          avFileType: ["hls", "mp4"], // Generate both HLS and MP4
+        },
+        storageConfig: {
+          vendor: 1, // AWS S3
+          region: 4, // Singapore region for AWS S3
+          bucket: awsS3BucketName,
+          accessKey: awsAccessKeyId,
+          secretKey: awsSecretAccessKey,
+          fileNamePrefix: ["recordings"], // Array format for file prefix
+        },
+      },
+    };
+
+    console.log("Starting recording with config:", {
+      url,
+      channelName,
+      uid,
+      resourceId,
+      bucket: awsS3BucketName,
+      fileNamePrefix,
+    });
 
     const response = await fetch(url, {
       method: "POST",
@@ -58,45 +104,14 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
         Authorization: authorization,
       },
-      body: JSON.stringify({
-        cname: channelName,
-        uid: String(uid),
-        clientRequest: {
-          token: "", // Leave empty for testing if channel is not secured
-          recordingConfig: {
-            channelType: 1,
-            streamTypes: 2,
-            streamMode: "default", // ✅ NOT "web"
-            videoStreamType: 0,
-            maxIdleTime: 30,
-            subscribeUidGroup: 0,
-            transcodingConfig: {
-              width: 360,
-              height: 640,
-              fps: 15,
-              bitrate: 500,
-              maxResolutionUid: String(uid),
-              mixedVideoLayout: 0,
-              backgroundColor: "#000000",
-            },
-          },
-          recordingFileConfig: {
-            avFileType: ["hls"],
-          },
-          storageConfig: {
-            vendor: 1,
-            region: agoraRegionCode,
-            bucket: awsS3BucketName,
-            accessKey: awsAccessKeyId,
-            secretKey: awsSecretAccessKey,
-            fileNamePrefix: ["recordings"],
-          },
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const data = await response.json();
-    console.log("Start response body:", JSON.stringify(data, null, 2));
+    console.log(
+      "Agora Start Recording Response:",
+      JSON.stringify(data, null, 2)
+    );
 
     if (!response.ok) {
       console.error("Agora Start Recording API Error:", {
@@ -111,7 +126,7 @@ export async function POST(req: Request) {
       });
       return NextResponse.json(
         {
-          error: data.message || "Failed to start recording",
+          error: data.message || data.reason || "Failed to start recording",
           details: data,
         },
         { status: response.status }
@@ -126,6 +141,7 @@ export async function POST(req: Request) {
       sid: data.sid,
       resourceId,
       serverResponse: data,
+      fileNamePrefix,
     });
   } catch (error) {
     console.error("Error starting Agora recording:", {
